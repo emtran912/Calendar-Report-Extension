@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Time Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f6f2;
+      --surface: #ffffff;
+      --surface-2: #f3f0ec;
+      --text: #28251d;
+      --muted: #6f6b64;
+      --border: #ddd7cf;
+      --primary: #01696f;
+      --primary-2: #0c4e54;
+      --warning: #da7101;
+      --success: #437a22;
+      --radius: 16px;
+      --shadow: 0 12px 30px rgba(25, 25, 25, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 400px;
+      min-height: 560px;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(180deg, #f7f6f2 0%, #f3f0ec 100%);
+      color: var(--text);
+    }
+    .app { padding: 16px; display: grid; gap: 14px; }
+    .card {
+      background: rgba(255,255,255,0.9);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .brand { display: flex; gap: 10px; align-items: center; }
+    .logo {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, #01696f, #77a7ab);
+      display: grid; place-items: center; color: white; font-weight: 700;
+    }
+    h1 { font-size: 18px; margin: 0; }
+    p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .button-row, .filters { display: flex; gap: 10px; flex-wrap: wrap; }
+    button, select, input[type="date"] {
+      font: inherit; border-radius: 12px; border: 1px solid var(--border);
+      padding: 10px 12px; background: white; color: var(--text);
+    }
+    button.primary { background: var(--primary); color: white; border-color: var(--primary); }
+    button.primary:hover { background: var(--primary-2); }
+    button.secondary:hover { background: var(--surface-2); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat { background: var(--surface-2); border-radius: 12px; padding: 12px; }
+    .stat strong { display: block; font-size: 18px; margin-bottom: 4px; }
+    .section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .bars { display: grid; gap: 12px; }
+    .bar-item { display: grid; gap: 6px; }
+    .bar-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+    .bar-track { height: 10px; border-radius: 999px; background: #e8e3dc; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #01696f, #69a3a7); }
+    .list { display: grid; gap: 10px; }
+    .list-item { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 8px; font-size: 12px; background: #dceceb; color: #0f4d52; }
+    .muted { color: var(--muted); }
+    .hidden { display: none !important; }
+    .footer-note { font-size: 12px; }
+    textarea {
+      width: 100%; min-height: 84px; resize: vertical; border-radius: 12px; border: 1px solid var(--border);
+      padding: 10px 12px; font: inherit; background: white;
+    }
+    .status { font-size: 12px; padding: 8px 10px; border-radius: 10px; background: #eef5f4; color: #0f4d52; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="card">
+      <div class="topbar">
+        <div class="brand">
+          <div class="logo">W</div>
+          <div>
+            <h1>Weekly Time Report</h1>
+            <p>See how your calendar turns into focused work, meetings, admin time, and personal blocks.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="button-row">
+        <button id="connectBtn" class="primary">Connect Google Calendar</button>
+        <button id="refreshBtn" class="secondary">Refresh report</button>
+        <button id="downloadBtn" class="secondary">Download JSON</button>
+      </div>
+      <div id="status" class="status" style="margin-top: 10px;">Not connected yet.</div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">
+        <strong>Week filters</strong>
+      </div>
+      <div class="filters">
+        <input type="date" id="weekStart" />
+        <select id="calendarSelect"></select>
+      </div>
+      <p class="footer-note" style="margin-top: 10px;">The report groups events by title rules, attendee count, and optional custom keywords.</p>
+    </section>
+
+    <section class="card">
+      <div class="section-title">
+        <strong>Weekly snapshot</strong>
+        <span id="rangeLabel" class="muted">This week</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><strong id="totalHours">0h</strong><span class="muted">Scheduled</span></div>
+        <div class="stat"><strong id="meetingHours">0h</strong><span class="muted">Meetings</span></div>
+        <div class="stat"><strong id="focusHours">0h</strong><span class="muted">Focus</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><strong>Time split</strong></div>
+      <div id="bars" class="bars"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><strong>Top patterns</strong></div>
+      <div id="patterns" class="list"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><strong>Custom rules</strong></div>
+      <p>Add one rule per line using <code>category: keyword1, keyword2</code>.</p>
+      <textarea id="rulesInput" placeholder="deep_work: heads down, focus, pomodoro\nlearning: course, study, revision"></textarea>
+      <div class="button-row" style="margin-top: 10px;">
+        <button id="saveRulesBtn" class="primary">Save rules</button>
+      </div>
+    </section>
+  </div>
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Calendar Weekly Time Report",
+  "version": "1.0.0",
+  "description": "Generate weekly reports from Google Calendar showing how you spend your time.",
+  "permissions": ["identity", "storage", "alarms", "notifications"],
+  "host_permissions": [
+    "https://www.googleapis.com/*"
+  ],
+  "oauth2": {
+  "client_id": "704993240877-e0cpfrh857m5q3qmjpa3pl2smo139tuu.apps.googleusercontent.com",
+  "scopes": [
+    "https://www.googleapis.com/auth/calendar.readonly"
+  ]
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Weekly time report"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
