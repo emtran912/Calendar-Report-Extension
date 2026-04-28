@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Time Report Options</title>
+  <style>
+    body { font-family: Inter, Arial, sans-serif; margin: 40px auto; max-width: 760px; padding: 0 20px; color: #28251d; background: #f7f6f2; }
+    .card { background: white; border: 1px solid #ddd7cf; border-radius: 16px; padding: 24px; }
+    h1 { margin-top: 0; }
+    code, pre { background: #f3f0ec; padding: 2px 6px; border-radius: 6px; }
+    pre { padding: 16px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Setup notes</h1>
+    <p>Before loading the extension, open <strong>Google Cloud Console</strong>, enable the Google Calendar API, and create an OAuth client for a Chrome extension.</p>
+    <ol>
+      <li>Load the extension unpacked once to get the extension ID.</li>
+      <li>In Google Cloud Console, create OAuth credentials for a Chrome Extension and use that extension ID.</li>
+      <li>Add the OAuth client ID back into <code>manifest.json</code> under <code>oauth2.client_id</code>.</li>
+      <li>Keep the scope as <code>https://www.googleapis.com/auth/calendar.readonly</code>.</li>
+    </ol>
+    <p>Add this field to the manifest after you create the OAuth client:</p>
+    <pre>"oauth2": {
+  "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
+  "scopes": ["https://www.googleapis.com/auth/calendar.readonly"]
+}</pre>
+    <p>You can then generate reports manually in the popup or let the background alarm refresh a weekly snapshot.</p>
+  </div>
+</body>
+</html>
