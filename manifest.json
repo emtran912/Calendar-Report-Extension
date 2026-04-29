@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "Calendar Weekly Time Report",
   "version": "1.0.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2hKNhMXVz3OXWU3EQ9qQ5gTnwepNeykETZ9iZmOK4w34cfL12uRrCOnjtsQ5fXQFWbPlZOaAbyKfuH0MIFAdG/DHwycTTCevqdgUz8C/ojjEMXS9xi83YKyxCiAx476ft1m/R9Qmxhh+j5S1IuaeC4ZKT/3vPxQuGselQNM1t/43szN5gQGolcD3vxd9nVMMMPfjb7XkiF8+dTx76NjlkXtMoJ6kfq84DpvF09kcGsFZ5J2kwW9nN6tXjDf61z6ChFgg0RBGZ2zGNO+cVoI5MY0Z+FGHP+qxBVyvZbly99tnYGC1Q6pj/gN6jogfjjvPg2tYS7eT64i+9eIoZH9DSwIDAQAB",
   "description": "Generate weekly reports from Google Calendar showing how you spend your time.",
   "permissions": ["identity", "storage", "alarms", "notifications"],
   "host_permissions": [
