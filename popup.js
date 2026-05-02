@@ -4,7 +4,12 @@ const els = {
   downloadBtn: document.getElementById('downloadBtn'),
   saveRulesBtn: document.getElementById('saveRulesBtn'),
   status: document.getElementById('status'),
-  weekStart: document.getElementById('weekStart'),
+
+  rangePreset: document.getElementById('rangePreset'),
+  startDate: document.getElementById('startDate'),
+  endDate: document.getElementById('endDate'),
+  customRangeFields: document.getElementById('customRangeFields'),
+
   calendarSelect: document.getElementById('calendarSelect'),
   totalHours: document.getElementById('totalHours'),
   meetingHours: document.getElementById('meetingHours'),
@@ -14,6 +19,8 @@ const els = {
   patterns: document.getElementById('patterns'),
   rulesInput: document.getElementById('rulesInput')
 };
+
+console.log(els);
 
 const fmtHours = (mins) => `${(mins / 60).toFixed(1)}h`;
 
@@ -80,34 +87,129 @@ async function loadCalendars() {
   });
 }
 
-async function loadRules() {
-  const { customRules = '' } = await chrome.storage.sync.get({ customRules: '' });
-  els.rulesInput.value = customRules;
+function getPresetRange(preset) {
+  const today = new Date();
+
+  const toInput = (d) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate() + 0).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const getMonday = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  if (preset === 'this_week') {
+    const start = getMonday(today);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { startDate: toInput(start), endDate: toInput(end) };
+  }
+
+  if (preset === 'last_7_days') {
+    const end = today;
+    const start = new Date(end);
+    start.setDate(end.getDate() - 6);
+    return { startDate: toInput(start), endDate: toInput(end) };
+  }
+
+  if (preset === 'last_30_days') {
+    const end = today;
+    const start = new Date(end);
+    start.setDate(end.getDate() - 29);
+    return { startDate: toInput(start), endDate: toInput(end) };
+  }
+
+  if (preset === 'this_month') {
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return { startDate: toInput(start), endDate: toInput(end) };
+  }
+
+  // custom: will be read from the inputs
+  return null;
 }
 
 async function refreshReport() {
-  const weekStart = els.weekStart.value;
+
+  const preset = els.rangePreset.value;
+
+  // 1) Compute the date range
+  let range = getPresetRange(preset);
+
+  if (preset === 'custom') {
+    range = {
+      startDate: els.startDate.value,
+      endDate: els.endDate.value
+    };
+  }
+
+  if (!range || !range.startDate || !range.endDate) {
+    els.status.textContent = 'Please choose a valid date range.';
+    return;
+  }
+
   const calendarId = els.calendarSelect.value || 'primary';
+
+  // 2) Call background with new shape
   els.status.textContent = 'Building report...';
-  const data = await sendMessage('GENERATE_REPORT', { weekStart, calendarId });
+
+  const data = await chrome.runtime.sendMessage({
+    type: 'GENERATE_REPORT',
+    preset,
+    startDate: range.startDate,
+    endDate: range.endDate,
+    calendarId
+  });
+
   if (data.error) {
     els.status.textContent = data.error;
     return;
   }
+
   const { report } = data;
+
+  // 3) Update UI from report
   els.status.textContent = `Last updated ${new Date().toLocaleTimeString()}`;
-  els.totalHours.textContent = fmtHours(report.totalMinutes);
-  els.meetingHours.textContent = fmtHours(report.categoryMinutes.meetings || 0);
-  els.focusHours.textContent = fmtHours(report.categoryMinutes.focus || 0);
+  els.totalHours.textContent = `${(report.totalMinutes / 60).toFixed(1)}h`;
+  els.meetingHours.textContent = `${((report.categoryMinutes.meetings || 0) / 60).toFixed(1)}h`;
+  els.focusHours.textContent = `${((report.categoryMinutes.focus || 0) / 60).toFixed(1)}h`;
   els.rangeLabel.textContent = `${report.range.start} → ${report.range.end}`;
+
+  // If you have renderBars / renderPatterns helpers, call them here:
   renderBars(report.categoryMinutes, report.totalMinutes);
   renderPatterns(report);
+}
+
+function updateRangeInputs() {
+  const preset = els.rangePreset.value;
+  const isCustom = preset === 'custom';
+
+  els.customRangeFields.classList.toggle('hidden', !isCustom);
+
+  if (!isCustom) {
+    const range = getPresetRange(preset);
+    if (range) {
+      els.startDate.value = range.startDate;
+      els.endDate.value = range.endDate;
+    }
+  }
 }
 
 els.connectBtn.addEventListener('click', async () => {
   els.status.textContent = 'Connecting...';
   const res = await sendMessage('AUTH');
-  els.status.textContent = res?.success ? 'Connected. Loading calendars...' : (res?.error || 'Failed to connect');
+  els.status.textContent = res?.success
+    ? 'Connected. Loading calendars...'
+    : (res?.error || 'Failed to connect');
+
   if (res?.success) {
     await loadCalendars();
     await refreshReport();
@@ -122,11 +224,15 @@ els.downloadBtn.addEventListener('click', async () => {
     els.status.textContent = 'No report available yet.';
     return;
   }
-  const blob = new Blob([JSON.stringify(data.report, null, 2)], { type: 'application/json' });
+
+  const blob = new Blob([JSON.stringify(data.report, null, 2)], {
+    type: 'application/json'
+  });
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `weekly-time-report-${data.report.range.start}.json`;
+  a.download = `time-report-${data.report.range.start}-to-${data.report.range.end}.json`;
   a.click();
   URL.revokeObjectURL(url);
 });
@@ -137,12 +243,25 @@ els.saveRulesBtn.addEventListener('click', async () => {
   await refreshReport();
 });
 
-els.weekStart.addEventListener('change', refreshReport);
+els.rangePreset.addEventListener('change', () => {
+  updateRangeInputs();
+  refreshReport();
+});
+
+els.startDate.addEventListener('change', refreshReport);
+els.endDate.addEventListener('change', refreshReport);
 els.calendarSelect.addEventListener('change', refreshReport);
 
+async function loadRules() {
+  const { customRules = '' } = await chrome.storage.sync.get({ customRules: '' });
+  els.rulesInput.value = customRules;
+}
+
 (async function init() {
-  els.weekStart.value = toDateInput(getMonday());
+  els.rangePreset.value = 'this_week';
+  updateRangeInputs();
   await loadRules();
+
   try {
     await loadCalendars();
     await refreshReport();

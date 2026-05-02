@@ -8,16 +8,20 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== 'weekly-report') return;
 
   try {
-    const monday = getMonday(new Date());
-    const weekStart = toDateInput(monday);
-    const report = await generateWeeklyReport({ weekStart, calendarId: 'primary' });
+    const { startDate, endDate } = getPresetDateRange('this_week');
+    const report = await generateTimeReport({
+      startDate,
+      endDate,
+      preset: 'this_week',
+      calendarId: 'primary'
+    });
     await chrome.storage.local.set({ lastReport: report });
 
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icon128.png',
-      title: 'Weekly time report ready',
-      message: `You scheduled ${formatHours(report.totalMinutes)} this week.`
+      title: 'Time report ready',
+      message: `You scheduled ${formatHours(report.totalMinutes)} in the latest report.`
     });
   } catch (err) {
     console.error('Scheduled report failed:', err);
@@ -40,7 +44,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       if (message.type === 'GENERATE_REPORT') {
-        const report = await generateWeeklyReport(message);
+        const report = await generateTimeReport({
+          preset: message.preset,
+          startDate: message.startDate,
+          endDate: message.endDate,
+          calendarId: message.calendarId || 'primary'
+        });
         await chrome.storage.local.set({ lastReport: report });
         sendResponse({ report });
         return;
@@ -147,6 +156,39 @@ function addDays(dateString, days) {
   return toDateInput(d);
 }
 
+function getPresetDateRange(preset) {
+  const today = new Date();
+
+  if (preset === 'this_week') {
+    const start = getMonday(today);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { startDate: toDateInput(start), endDate: toDateInput(end) };
+  }
+
+  if (preset === 'last_7_days') {
+    const end = today;
+    const start = new Date(end);
+    start.setDate(end.getDate() - 6);
+    return { startDate: toDateInput(start), endDate: toDateInput(end) };
+  }
+
+  if (preset === 'last_30_days') {
+    const end = today;
+    const start = new Date(end);
+    start.setDate(end.getDate() - 29);
+    return { startDate: toDateInput(start), endDate: toDateInput(end) };
+  }
+
+  if (preset === 'this_month') {
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return { startDate: toDateInput(start), endDate: toDateInput(end) };
+  }
+
+  return null;
+}
+
 function eventDurationMinutes(event) {
   const start = new Date(event.start?.dateTime || event.start?.date);
   const end = new Date(event.end?.dateTime || event.end?.date);
@@ -187,7 +229,7 @@ function categorizeEvent(event, rules) {
 
   if (isAllDay(event)) return 'all_day';
   if ((event.attendees?.length || 0) >= 2 || /1:1|sync|standup|meeting|interview|catch up|retro|planning/.test(text)) return 'meetings';
-  if (/focus|deep work|study|revision|research|build|coding|analysis|write/.test(text)) return 'focus';
+  if (/focus|deep work|study|revision|research|build|coding|learning|analysis|write/.test(text)) return 'focus';
   if (/commute|travel/.test(text)) return 'travel';
   if (/gym|badminton|swim|run|yoga|workout/.test(text)) return 'health';
   if (/lunch|break|dinner/.test(text)) return 'breaks';
@@ -199,12 +241,27 @@ function formatHours(minutes) {
   return `${(minutes / 60).toFixed(1)}h`;
 }
 
-async function generateWeeklyReport({ weekStart, calendarId = 'primary' }) {
+async function generateTimeReport({ startDate, endDate, preset = 'custom', calendarId = 'primary' }) {
+  // Allow callers to pass only a preset
+  if ((!startDate || !endDate) && preset !== 'custom') {
+    const computed = getPresetDateRange(preset);
+    if (!computed) throw new Error('Unknown preset.');
+    startDate = computed.startDate;
+    endDate = computed.endDate;
+  }
+
+  if (!startDate || !endDate) {
+    throw new Error('Start date and end date are required.');
+  }
+
   const { customRules = '' } = await chrome.storage.sync.get({ customRules: '' });
   const rules = parseRules(customRules);
 
-  const timeMin = new Date(`${weekStart}T00:00:00`).toISOString();
-  const timeMax = new Date(`${addDays(weekStart, 7)}T00:00:00`).toISOString();
+  const timeMin = new Date(`${startDate}T00:00:00`).toISOString();
+  // timeMax is exclusive; add 1 day after endDate
+  const endDateObj = new Date(`${endDate}T00:00:00`);
+  endDateObj.setDate(endDateObj.getDate() + 1);
+  const timeMax = new Date(`${toDateInput(endDateObj)}T00:00:00`).toISOString();
 
   const response = await api(`/calendars/${encodeURIComponent(calendarId)}/events`, {
     singleEvents: 'true',
@@ -257,7 +314,8 @@ async function generateWeeklyReport({ weekStart, calendarId = 'primary' }) {
 
   return {
     generatedAt: new Date().toISOString(),
-    range: { start: weekStart, end: addDays(weekStart, 6) },
+    preset,
+    range: { start: startDate, end: endDate },
     totalMinutes,
     meetingShare: totalMinutes ? Math.round((meetingMinutes / totalMinutes) * 100) : 0,
     contextSwitches,
