@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Weekly Time Report</title>
+  <title>Calendar Time Report</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -85,7 +85,7 @@
         <div class="brand">
           <div class="logo">W</div>
           <div>
-            <h1>Weekly Time Report</h1>
+            <h1>Calendar Time Report</h1>
             <p>See how your calendar turns into focused work, meetings, admin time, and personal blocks.</p>
           </div>
         </div>
@@ -102,19 +102,29 @@
     </section>
 
     <section class="card">
-      <div class="section-title">
-        <strong>Week filters</strong>
-      </div>
-      <div class="filters">
-        <input type="date" id="weekStart" />
-        <select id="calendarSelect"></select>
-      </div>
-      <p class="footer-note" style="margin-top: 10px;">The report groups events by title rules, attendee count, and optional custom keywords.</p>
-    </section>
+  <div class="section-title">
+    <strong>Date range</strong>
+  </div>
+  <div class="filters">
+    <select id="rangePreset">
+      <option value="this_week">This week</option>
+      <option value="last_7_days">Last 7 days</option>
+      <option value="last_30_days">Last 30 days</option>
+      <option value="this_month">This month</option>
+      <option value="custom">Custom</option>
+    </select>
+    <select id="calendarSelect"></select>
+  </div>
+  <div id="customRangeFields" class="filters hidden" style="margin-top: 10px;">
+    <input type="date" id="startDate" />
+    <input type="date" id="endDate" />
+  </div>
+  <p class="footer-note" style="margin-top: 10px;">Choose a preset or a custom date range to build your report.</p>
+</section>
 
     <section class="card">
       <div class="section-title">
-        <strong>Weekly snapshot</strong>
+        <strong>Time Summary</strong>
         <span id="rangeLabel" class="muted">This week</span>
       </div>
       <div class="stats">
@@ -143,6 +153,6 @@
       </div>
     </section>
   </div>
-  <script src="popup.js" type="module"></script>
+  <script src="popup.js"></script>
 </body>
 </html>
